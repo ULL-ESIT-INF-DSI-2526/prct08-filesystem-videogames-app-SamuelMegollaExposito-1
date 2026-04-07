@@ -1,0 +1,12 @@
+{
+  "id": 3,
+  "name": "Collector Edition",
+  "description": "Expensive",
+  "platform": "PlayStation 5",
+  "genre": "Estrategia",
+  "developer": "Nintendo",
+  "year": 2024,
+  "multiplayer": false,
+  "hours": 20,
+  "value": 120
+}

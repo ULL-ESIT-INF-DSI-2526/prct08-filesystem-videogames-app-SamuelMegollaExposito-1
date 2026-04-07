@@ -1,0 +1,12 @@
+{
+  "id": 1,
+  "name": "Elden Ring",
+  "description": "Actualizado",
+  "platform": "PC",
+  "genre": "Rol",
+  "developer": "FromSoftware",
+  "year": 2022,
+  "multiplayer": true,
+  "hours": 150,
+  "value": 90
+}
