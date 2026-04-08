@@ -1,0 +1,272 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import chalk from 'chalk';
+import { Videogame } from './types.js';
+
+/**
+ * Clase que gestiona la colección de videojuegos usando el API de callbacks de Node.js
+ */
+export class GameCollection {
+  private readonly basePath: string
+
+  /**
+   * Crea una instancia de la colección
+   * @param customPath Ruta opcional para almacenar los datos (por defecto ./data)
+   */
+  constructor(customPath: string = './data') {
+    this.basePath = customPath
+    fs.access(this.basePath, (err) => {
+      if (err) {
+        fs.mkdir(this.basePath, { recursive: true }, (mkdirErr) => {
+          if (mkdirErr) console.log(chalk.red("Error al crear directorio base"))
+        })
+      }
+    })
+  }
+
+  /**
+   * Asegura que el directorio del usuario existe antes de operar
+   * @param user Nombre del usuario
+   * @param callback Función a ejecutar cuando el directorio esté listo
+   */
+  private ensureUserDir(user: string, callback: (userPath: string) => void): void {
+    const userPath = path.join(this.basePath, user);
+    fs.access(userPath, (err) => {
+      if (err) {
+        fs.mkdir(userPath, { recursive: true }, (mkdirErr) => {
+          if (!mkdirErr) callback(userPath);
+        });
+      } else {
+        callback(userPath);
+      }
+    });
+  }
+
+  /**
+   * Añade un videojuego a la colección del usuario
+   * @param user Nombre del usuario
+   * @param game Objeto con los datos del videojuego
+   */
+  public addGame(user: string, game: Videogame): void {
+    this.ensureUserDir(user, (userPath) => {
+      const filePath = path.join(userPath, `${game.id}.json`);
+      
+      // Comprobamos si el archivo ya existe
+      fs.access(filePath, (err) => {
+        if (!err) {
+          console.log(chalk.red(`Videogame already exists at ${user} collection!`));
+        } else {
+          fs.writeFile(filePath, JSON.stringify(game, null, 2), (writeErr) => {
+            if (writeErr) {
+              console.log(chalk.red("Error al escribir el archivo"));
+            } else {
+              console.log(chalk.green(`New videogame added to ${user} collection!`));
+            }
+          });
+        }
+      });
+    });
+  }
+
+  /**
+   * Modifica un videojuego existente
+   * @param user Nombre del usuario
+   * @param game Datos actualizados del videojuego
+   */
+  public updateGame(user: string, game: Videogame): void {
+    this.ensureUserDir(user, (userPath) => {
+      const filePath = path.join(userPath, `${game.id}.json`);
+      
+      fs.access(filePath, (err) => {
+        if (err) {
+          console.log(chalk.red(`Videogame not found at ${user} collection!`));
+        } else {
+          fs.writeFile(filePath, JSON.stringify(game, null, 2), (writeErr) => {
+            if (!writeErr) console.log(chalk.green(`Videogame updated at ${user} collection!`));
+          });
+        }
+      });
+    });
+  }
+
+  /**
+   * Elimina un videojuego de la colección
+   * @param user Nombre del usuario
+   * @param id Identificador del videojuego
+   */
+  public removeGame(user: string, id: number): void {
+    this.ensureUserDir(user, (userPath) => {
+      const filePath = path.join(userPath, `${id}.json`);
+      
+      fs.access(filePath, (err) => {
+        if (err) {
+          console.log(chalk.red(`Videogame not found at ${user} collection!`));
+        } else {
+          fs.unlink(filePath, (unlinkErr) => {
+            if (!unlinkErr) console.log(chalk.green(`Videogame removed from ${user} collection!`));
+          });
+        }
+      });
+    });
+  }
+
+  /**
+   * Muestra la información de un videojuego concreto
+   * @param user Nombre del usuario
+   * @param id Identificador del videojuego
+   */
+  public readGame(user: string, id: number): void {
+    this.ensureUserDir(user, (userPath) => {
+      const filePath = path.join(userPath, `${id}.json`);
+      
+      fs.readFile(filePath, 'utf-8', (err, data) => {
+        if (err) {
+          console.log(chalk.red(`Videogame not found at ${user} collection!`));
+        } else {
+          this.displayGame(JSON.parse(data));
+        }
+      });
+    });
+  }
+
+  /**
+   * Lista todos los videojuegos de un usuario
+   * @param user Nombre del usuario
+   */
+  public listGames(user: string): void {
+    this.ensureUserDir(user, (userPath) => {
+      fs.readdir(userPath, (err, files) => {
+        if (err || files.length === 0) {
+          console.log(chalk.yellow(`${user} has no games in the collection`));
+          return;
+        }
+
+        console.log(chalk.white(`${user} videogame collection`));
+        files.forEach(file => {
+          fs.readFile(path.join(userPath, file), 'utf-8', (readErr, data) => {
+            if (!readErr) this.displayGame(JSON.parse(data));
+          });
+        });
+      });
+    });
+  }
+
+  /**
+   * Devuelve el color correspondiente según el valor de mercado
+   * @param value Valor numérico del mercado
+   * @returns Función de chalk para aplicar color
+   */
+  private getValueColor(value: number) {
+    if (value < 20) return chalk.red;
+    if (value < 50) return chalk.yellow;
+    if (value < 80) return chalk.blue;
+    return chalk.green;
+  }
+
+  /**
+   * Muestra la información formateada de un videojuego
+   * @param game Objeto videojuego a mostrar
+   */
+  private displayGame(game: Videogame): void {
+    const color = this.getValueColor(game.value);
+    console.log(`--------------------------------`);
+    console.log(`ID: ${game.id}`);
+    console.log(`Name: ${game.name}`);
+    console.log(`Description: ${game.description}`);
+    console.log(`Platform: ${game.platform}`);
+    console.log(`Genre: ${game.genre}`);
+    console.log(`Developer: ${game.developer}`);
+    console.log(`Year: ${game.year}`);
+    console.log(`Multiplayer: ${game.multiplayer}`);
+    console.log(`Estimated hours: ${game.hours}`);
+    console.log(`Market value: ` + color(`${game.value}`));
+  }
+}
+
+import yargs from 'yargs';
+import { hideBin } from 'yargs/helpers';
+import chalk from 'chalk';
+import { GameCollection } from './gameCollection.js';
+import { Platform, Genre } from './types.js';
+
+const collection = new GameCollection()
+
+/**
+ * Configuración de comandos de la aplicación mediante yargs
+ */
+yargs(hideBin(process.argv))
+  .command('add', 'Adds a videogame to the collection', {
+    user: { type: 'string', demandOption: true, describe: 'User name' },
+    id: { type: 'number', demandOption: true, describe: 'Game ID' },
+    name: { type: 'string', demandOption: true, describe: 'Game name' },
+    desc: { type: 'string', demandOption: true, describe: 'Description' },
+    platform: { choices: Object.values(Platform), demandOption: true, describe: 'Platform' },
+    genre: { choices: Object.values(Genre), demandOption: true, describe: 'Genre' },
+    developer: { type: 'string', demandOption: true, describe: 'Developer' },
+    year: { type: 'number', demandOption: true, describe: 'Release year' },
+    multiplayer: { type: 'boolean', demandOption: true, describe: 'Is multiplayer' },
+    hours: { type: 'number', demandOption: true, describe: 'Estimated hours' },
+    value: { type: 'number', demandOption: true, describe: 'Market value' }
+  }, (argv) => {
+    if (argv.year < 0 || argv.hours < 0 || argv.value < 0) {
+      console.log(chalk.red("Error: Numerical values must be positive"))
+      return
+    }
+    collection.addGame(argv.user, {
+      id: argv.id,
+      name: argv.name,
+      description: argv.desc,
+      platform: argv.platform as Platform,
+      genre: argv.genre as Genre,
+      developer: argv.developer,
+      year: argv.year,
+      multiplayer: argv.multiplayer,
+      hours: argv.hours,
+      value: argv.value
+    })
+  })
+  .command('update', 'Updates an existing videogame', {
+    user: { type: 'string', demandOption: true },
+    id: { type: 'number', demandOption: true },
+    name: { type: 'string', demandOption: true },
+    desc: { type: 'string', demandOption: true },
+    platform: { choices: Object.values(Platform), demandOption: true },
+    genre: { choices: Object.values(Genre), demandOption: true },
+    developer: { type: 'string', demandOption: true },
+    year: { type: 'number', demandOption: true },
+    multiplayer: { type: 'boolean', demandOption: true },
+    hours: { type: 'number', demandOption: true },
+    value: { type: 'number', demandOption: true }
+  }, (argv) => {
+    collection.updateGame(argv.user, {
+      id: argv.id,
+      name: argv.name,
+      description: argv.desc,
+      platform: argv.platform as Platform,
+      genre: argv.genre as Genre,
+      developer: argv.developer,
+      year: argv.year,
+      multiplayer: argv.multiplayer,
+      hours: argv.hours,
+      value: argv.value
+    })
+  })
+  .command('remove', 'Removes a game', {
+    user: { type: 'string', demandOption: true },
+    id: { type: 'number', demandOption: true }
+  }, (argv) => {
+    collection.removeGame(argv.user, argv.id)
+  })
+  .command('list', 'Lists all games of a user', {
+    user: { type: 'string', demandOption: true }
+  }, (argv) => {
+    collection.listGames(argv.user)
+  })
+  .command('read', 'Shows details of a specific game', {
+    user: { type: 'string', demandOption: true },
+    id: { type: 'number', demandOption: true }
+  }, (argv) => {
+    collection.readGame(argv.user, argv.id)
+  })
+  .help()
+  .argv

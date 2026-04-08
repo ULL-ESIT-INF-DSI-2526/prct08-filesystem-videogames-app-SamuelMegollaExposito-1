@@ -15,7 +15,6 @@ export class GameCollection {
    */
   constructor(customPath: string = './data') {
     this.basePath = customPath
-    // Creamos la carpeta base si no existe usando callbacks
     fs.access(this.basePath, (err) => {
       if (err) {
         fs.mkdir(this.basePath, { recursive: true }, (mkdirErr) => {
