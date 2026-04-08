@@ -35,16 +35,9 @@ export class BackupManager{
       }
 
       fs.mkdirSync(backupPath)
+      fs.cpSync(sourceDir, backupPath, {recursive: true});
 
-      const files = fs.readdirSync(sourceDir)
-      let count = 0
-      files.forEach(file => {
-        const src = path.join(sourceDir, file)
-        const dst = path.join(backupPath, file)
-        fs.copyFileSync(src,dst);
-      })
-
-      console.log(chalk.green(`Copia de seguridad creada: ${backupName} (${count} ficheros)`))
+      console.log(chalk.green(`Copia de seguridad creada: ${backupName}`))
     } catch (err) {
       console.log(chalk.red(`Error al crear copia: ${(err as Error).message}`))
     }
@@ -105,14 +98,9 @@ export class BackupManager{
       }
 
       const files = fs.readdirSync(backupPath)
-      let count = 0
-      files.forEach(file => {
-        const src = path.join(backupPath, file)
-        const dst = path.join(originalDir, file)
-        fs.copyFileSync(src,dst);
-      })
+      fs.cpSync(backupPath, originalDir, {recursive: true});
 
-      console.log(chalk.green(`Restauración completada: ${count} ficheros en ${originalDir}`))
+      console.log(chalk.green(`Restauración completada, ficheros en ${originalDir}`))
     } catch (err) {
       console.log(chalk.red(`Error al restaurar: ${(err as Error).message}`))
     }
